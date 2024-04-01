@@ -1,7 +1,2 @@
 ---
 plugin: redhat.openshift_virtualization.kubevirt
-connections:
-- namespaces:
-  - ansible-testing
-groups:
-  openshiftvirt: true
