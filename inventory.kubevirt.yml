@@ -1,0 +1,6 @@
+---
+- name: Pull VMs from a namespace 
+  plugin: redhat.openshift_virtualization.kubevirt
+  connections:
+    - namespaces:
+        - ansible-testing
