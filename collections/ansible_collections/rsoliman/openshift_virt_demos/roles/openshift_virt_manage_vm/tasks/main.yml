@@ -1,0 +1,31 @@
+---
+- name: Manage the {{ vm_name }} VirtualMachine to make sure it is {{ vm_state }}
+  redhat.openshift_virtualization.kubevirt_vm:
+    state: "{{ vm_state }}"
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+    labels:
+      os: "{{ vm_labels.vm_os }}"
+      provisioner: "{{ vm_labels.vm_provisioner }}"
+      owner: "{{ vm_labels.vm_owner }}"
+    instancetype:
+      name: "{{ vm_instance_type }}"
+    spec:
+      domain:
+        devices:
+          interfaces:
+            - name: nic-mgt
+              bridge: {}
+              model: virtio
+      networks:
+        - name: nic-mgt          
+          multus:
+            networkName: "{{ vm_management_network_name }}"
+      volumes:
+        - name: containerdisk
+          containerDisk:
+            image: "{{ vm_os_images[vm_os] }}"
+        - name: cloudinit
+          cloudInitNoCloud:
+            secretRef:
+              name: "{{ startup_script_secret_name }}"

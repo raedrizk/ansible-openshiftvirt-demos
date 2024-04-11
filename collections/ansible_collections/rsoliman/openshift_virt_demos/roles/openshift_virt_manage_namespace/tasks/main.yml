@@ -1,0 +1,7 @@
+---
+- name: Ensure that namespace "{{ vm_namespace }}" is "{{ vm_namespace_state }}"
+  redhat.openshift.k8s:
+    name: "{{ vm_namespace }}"
+    api_version: v1
+    kind: Namespace
+    state: "{{ vm_namespace_state }}"

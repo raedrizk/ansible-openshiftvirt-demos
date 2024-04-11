@@ -1,2 +1,5 @@
----
 plugin: redhat.openshift_virtualization.kubevirt
+connections:
+  - namespaces:
+    - ansible-demo
+  - create_groups: true

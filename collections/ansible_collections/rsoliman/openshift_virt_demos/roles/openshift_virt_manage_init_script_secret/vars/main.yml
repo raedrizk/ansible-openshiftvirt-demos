@@ -1,0 +1,8 @@
+---
+startup_script_secret_name: "{{ startup_script_secret_name_input | default('ansible-startup-script') }}"
+startup_script_secret_state: "{{ startup_script_secret_state_input | default('present') }}"
+vm_namespace: "{{ vm_namespace_input | default('ansible-demo') }}"
+
+ansible_service_account_username: "{{ ansible_service_account_username_input | default('ansibleadmin') }}"
+ansible_service_account_password: "{{ ansible_service_account_password_input | default('youshallnotpass') }}"
+ansible_service_account_public_key: "{{ ansible_service_account_public_key_input | default('ssh-rsa CCC') }}"

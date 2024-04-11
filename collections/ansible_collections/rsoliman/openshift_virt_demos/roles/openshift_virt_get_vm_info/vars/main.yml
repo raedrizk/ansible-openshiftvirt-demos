@@ -1,0 +1,2 @@
+---
+vm_namespace: "{{ vm_namespace_input | default('ansible-demo') }}"

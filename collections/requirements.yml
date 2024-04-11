@@ -1,0 +1,4 @@
+---
+collections:
+- redhat.openshift_virtualization
+- redhat.openshift

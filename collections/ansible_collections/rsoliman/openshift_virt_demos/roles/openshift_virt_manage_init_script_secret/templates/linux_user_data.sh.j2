@@ -1,0 +1,11 @@
+#!/bin/bash
+export NEW_USER="{{ ansible_service_account_username }}"
+export SSH_PUB_KEY="{{ ansible_service_account_public_key }}"
+
+sudo adduser -U -m $NEW_USER
+echo "$NEW_USER:{{ ansible_service_account_password }}" | chpasswd
+sudo mkdir /home/$NEW_USER/.ssh
+sudo echo "$SSH_PUB_KEY" > /home/$NEW_USER/.ssh/authorized_keys
+sudo chown -R ${NEW_USER}: /home/$NEW_USER/.ssh
+sudo usermod -a -G sudo ${NEW_USER}
+sudo usermod -a -G wheel ${NEW_USER}

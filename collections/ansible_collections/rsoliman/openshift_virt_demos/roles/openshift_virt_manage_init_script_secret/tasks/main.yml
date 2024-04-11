@@ -1,0 +1,13 @@
+---
+- name: Ensure that startup secret is "{{ startup_script_secret_state }}"
+  redhat.openshift.k8s:
+    state: "{{ startup_script_secret_state }}"
+    definition: 
+      apiVersion: v1
+      kind: Secret
+      type: Opaque             
+      metadata:
+        name: "{{ startup_script_secret_name }}"
+        namespace: "{{ vm_namespace }}"     
+      data:
+        userData: "{{ lookup('template', 'linux_user_data.sh.j2') | b64encode }}"
