@@ -9,3 +9,4 @@ sudo echo "$SSH_PUB_KEY" > /home/$NEW_USER/.ssh/authorized_keys
 sudo chown -R ${NEW_USER}: /home/$NEW_USER/.ssh
 sudo usermod -a -G sudo ${NEW_USER}
 sudo usermod -a -G wheel ${NEW_USER}
+echo '%wheel         ALL = (ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo 
