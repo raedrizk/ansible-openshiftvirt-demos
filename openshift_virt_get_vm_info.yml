@@ -1,0 +1,8 @@
+---
+- name: Get information on VM running in Openshift
+  hosts: all
+  gather_facts: false
+  vars:
+    ansible_python_interpreter: /usr/bin/python
+  roles:
+  - rsoliman.openshift_virt_demos.openshift_virt_get_vm_info
