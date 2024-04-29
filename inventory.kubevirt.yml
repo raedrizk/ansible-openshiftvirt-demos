@@ -3,3 +3,8 @@ connections:
   - namespaces:
     - ansible-demo
   - create_groups: true
+compose:
+  composed_manager: "'Ansible'"
+groups: 
+  RHEL: vmi_guest_os_info.id == 'rhel'
+  Windows: vmi_guest_os_info.id == 'mswindows'

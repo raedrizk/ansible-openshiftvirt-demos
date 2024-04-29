@@ -1,9 +1,10 @@
 ---
 - name: Get a list of all VirtualMachines
   redhat.openshift_virtualization.kubevirt_vm_info:
+    name: "{{ vm_name | default(omit) }}"
     namespace: "{{ vm_namespace }}"
   register: vm_list
 
 - name: print vm info
   ansible.builtin.debug:
-    var: vm_list
+    var: vm_list.resources

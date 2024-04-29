@@ -1,0 +1,17 @@
+---
+vm_namespace: "{{ vm_namespace_input | default('ansible-demo') }}"
+vm_name: "{{ vm_name_input | default('demovm') }}"
+vm_state: "{{ vm_state_input | default('present') }}"
+vm_disk_size: "{{ vm_disk_size_input | default('50') }}"
+vm_memory_size: "{{ vm_memory_size_input | default('4') }}"
+vm_cores: "{{ vm_cores_input | default(4) | int }}"
+vm_sockets: "{{ vm_sockets_input | default(1) | int }}"
+vm_threads: "{{ vm_threads_input | default(1)| int }}"
+vm_os: "{{ vm_os_input | default('rhel8') }}"
+vm_labels:
+  vm_os: "{{ vm_os_input | default('rhel8') }}"
+  vm_provisioner: "{{ vm_provisioner_input | default('Ansible') }}"
+  vm_owner: "{{ vm_owner_input | default('ansibleadmin') }}"
+vm_management_network_name: "{{ vm_management_network_name_input | default('mgt') }}"
+startup_script_secret_name: "{{ startup_script_secret_name_input | default('ansible-startup-script') }}"
+vm_os_images_namespace: "{{ vm_os_images_namespace_input | default('openshift-virtualization-os-images') }}"

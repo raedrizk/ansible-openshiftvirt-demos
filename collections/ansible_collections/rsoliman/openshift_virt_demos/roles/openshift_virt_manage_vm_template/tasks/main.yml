@@ -1,0 +1,61 @@
+---
+- name: Create a VirtualMachine {{ vm_name }} in {{ vm_namespace }} with the {{ vm_os }} template
+  redhat.openshift_virtualization.kubevirt_vm:
+    state: "{{ vm_state }}"
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+    labels:
+      app: "{{ vm_name }}"
+    data_volume_templates:
+      - apiVersion: cdi.kubevirt.io/v1beta1
+        kind: DataVolume
+        metadata:
+          name: "{{ vm_name }}"
+        spec:
+          sourceRef:
+            kind: DataSource
+            name: "{{ vm_os }}"
+            namespace: "{{ vm_os_images_namespace }}"
+          storage:
+            resources:
+              requests:
+                storage: "{{ vm_disk_size }}Gi"
+    spec:
+      architecture: amd64
+      domain: 
+        cpu: 
+          cores: 4
+          sockets: 1
+          threads: 1
+        devices:
+          disks:
+            - disk:
+                bus: virtio
+              name: rootdisk
+            - disk:
+                bus: virtio
+              name: cloudinitdisk
+          interfaces:
+            # - masquerade: {}
+            #   model: virtio
+            #   name: default
+            - bridge: {}
+              model: virtio
+              name: nic-mgmt
+        memory:
+          guest: "{{ vm_memory_size }}Gi"
+      networks:
+        # - name: default
+        #   pod: {}
+        - multus:
+            networkName: "{{ vm_management_network_name }}"
+          name: nic-mgmt
+      volumes:
+        - dataVolume:
+            name: "{{ vm_name }}"
+          name: rootdisk
+        - name: cloudinitdisk
+          cloudInitNoCloud:
+            secretRef:
+              name: "{{ startup_script_secret_name }}"
+    wait: true

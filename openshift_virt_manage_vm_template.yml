@@ -1,0 +1,10 @@
+---
+- name: Manage an Openshift Virt VM
+  hosts: all
+  gather_facts: false
+  vars:
+    ansible_python_interpreter: /usr/bin/python
+  roles:
+  - rsoliman.openshift_virt_demos.openshift_virt_manage_namespace
+  - rsoliman.openshift_virt_demos.openshift_virt_manage_init_script_secret
+  - rsoliman.openshift_virt_demos.openshift_virt_manage_vm_template

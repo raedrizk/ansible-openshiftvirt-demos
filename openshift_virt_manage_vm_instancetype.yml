@@ -7,4 +7,4 @@
   roles:
   - rsoliman.openshift_virt_demos.openshift_virt_manage_namespace
   - rsoliman.openshift_virt_demos.openshift_virt_manage_init_script_secret
-  - rsoliman.openshift_virt_demos.openshift_virt_manage_vm
+  - rsoliman.openshift_virt_demos.openshift_virt_manage_vm_instancetype
