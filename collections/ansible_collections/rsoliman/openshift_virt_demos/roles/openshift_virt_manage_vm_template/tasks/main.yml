@@ -59,3 +59,10 @@
             secretRef:
               name: "{{ startup_script_secret_name }}"
     wait: true
+
+
+- name: Setting Statistics for other Templates
+  ansible.builtin.set_stats:
+    data:
+      vm_name: "{{ vm_name }}"
+      ci_manufacturer: 'OCPVirt'
