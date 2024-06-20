@@ -36,20 +36,20 @@
                 bus: virtio
               name: cloudinitdisk
           interfaces:
-            # - masquerade: {}
-            #   model: virtio
-            #   name: default
-            - bridge: {}
+            - masquerade: {}
               model: virtio
-              name: nic-mgmt
+              name: default
+            # - bridge: {}
+            #   model: virtio
+            #   name: nic-mgmt
         memory:
           guest: "{{ vm_memory_size }}Gi"
       networks:
-        # - name: default
-        #   pod: {}
-        - multus:
-            networkName: "{{ vm_management_network_name }}"
-          name: nic-mgmt
+        - name: default
+          pod: {}
+        # - multus:
+        #     networkName: "{{ vm_management_network_name }}"
+        #   name: nic-mgmt
       volumes:
         - dataVolume:
             name: "{{ vm_name }}"
