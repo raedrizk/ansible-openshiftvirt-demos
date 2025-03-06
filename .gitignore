@@ -1,3 +1,5 @@
+.ansible/*
+.vscode/*
 ansible-navigator.yml
 localhost_inventory
 logs/*
