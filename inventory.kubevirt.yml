@@ -3,7 +3,7 @@ namespaces:
 - ansible-demo
 compose:
   composed_manager: "'Ansible'"
-host_format: name
+host_format: "{{ name }}"
 groups: 
   RHEL: vmi_guest_os_info.id == 'rhel'
   Windows: vmi_guest_os_info.id == 'mswindows'
