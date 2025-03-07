@@ -1,6 +1,11 @@
 plugin: redhat.openshift_virtualization.kubevirt
 namespaces:
 - ansible-demo
+compose:
+  composed_manager: "'Ansible'"
+groups: 
+  RHEL: vmi_guest_os_info.id == 'rhel'
+  Windows: vmi_guest_os_info.id == 'mswindows'
 # network_name: bridge-network
 
 # plugin: redhat.openshift_virtualization.kubevirt
