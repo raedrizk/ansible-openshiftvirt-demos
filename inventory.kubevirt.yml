@@ -7,15 +7,3 @@ host_format: '{name}'
 groups: 
   RHEL: vmi_guest_os_info.id == 'rhel'
   Windows: vmi_guest_os_info.id == 'mswindows'
-# network_name: bridge-network
-
-# plugin: redhat.openshift_virtualization.kubevirt
-# connections:
-#   - namespaces:
-#     - ansible-demo
-#   - create_groups: true
-# compose:
-#   composed_manager: "'Ansible'"
-# groups: 
-#   RHEL: vmi_guest_os_info.id == 'rhel'
-#   Windows: vmi_guest_os_info.id == 'mswindows'
