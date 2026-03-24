@@ -2,8 +2,8 @@
 - name: Manage A VM using the K8s module
   hosts: all
   gather_facts: false
-  vars:
-    ansible_python_interpreter: /usr/bin/python
+  # vars:
+  #   ansible_python_interpreter: /usr/bin/python
   tasks:
   - name: Create a VM by reading the definition from a file
     redhat.openshift.k8s:
