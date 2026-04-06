@@ -112,27 +112,11 @@
     - vm_cores is defined and vm_cores != omit
     - vm_memory_size is defined and vm_memory_size != omit
     - vm_instance_type is not defined or vm_instance_type == omit
-  register: resize_result
-  delegate_to: localhost
-
-- name: Debug - Show resize result
-  ansible.builtin.debug:
-    msg: "VM resize applied, changed: {{ resize_result.changed }}"
-  when:
-    - vm_cores is defined and vm_cores != omit
-    - vm_memory_size is defined and vm_memory_size != omit
-    - vm_instance_type is not defined or vm_instance_type == omit
   delegate_to: localhost
 
 - name: Pause to allow resize to be fully processed
   ansible.builtin.pause:
     seconds: 5
-  when: vm_running
-  delegate_to: localhost
-
-- name: Debug - Show if VM should be started
-  ansible.builtin.debug:
-    msg: "VM was originally running: {{ vm_running }}, will attempt to start it"
   when: vm_running
   delegate_to: localhost
 
@@ -145,13 +129,6 @@
     definition:
       spec:
         running: true
-  when: vm_running
-  register: start_result
-  delegate_to: localhost
-
-- name: Debug - Show start result
-  ansible.builtin.debug:
-    var: start_result
   when: vm_running
   delegate_to: localhost
 

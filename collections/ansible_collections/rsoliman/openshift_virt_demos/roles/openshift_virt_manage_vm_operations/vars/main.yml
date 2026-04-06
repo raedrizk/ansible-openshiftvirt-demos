@@ -1,0 +1,5 @@
+---
+vm_namespace: "{{ vm_namespace_input | default('ansible-demo') }}"
+vm_name: "{{ vm_name_input | default('demovm') }}"
+vm_operation: "{{ vm_operation_input | default('start') }}"
+vm_snapshot_name: "{{ vm_snapshot_name_input | default(vm_name ~ '-snapshot-' ~ ansible_date_time.epoch) }}"

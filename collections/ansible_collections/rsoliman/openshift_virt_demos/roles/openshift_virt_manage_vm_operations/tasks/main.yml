@@ -1,0 +1,164 @@
+---
+- name: Validate operation input
+  ansible.builtin.fail:
+    msg: "Invalid operation '{{ vm_operation }}'. Must be one of: start, stop, restart, snapshot"
+  when: vm_operation not in ['start', 'stop', 'restart', 'snapshot']
+  delegate_to: localhost
+
+- name: Get current VirtualMachine {{ vm_name }} information
+  redhat.openshift_virtualization.kubevirt_vm_info:
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+  register: vm_info
+  delegate_to: localhost
+
+- name: Fail if VM does not exist
+  ansible.builtin.fail:
+    msg: "VirtualMachine {{ vm_name }} does not exist in namespace {{ vm_namespace }}"
+  when: vm_info.resources | length == 0
+  delegate_to: localhost
+
+- name: Get current VM running state
+  ansible.builtin.set_fact:
+    vm_current_state: "{{ vm_info.resources[0].spec.running | default(false) }}"
+  delegate_to: localhost
+
+# START operation
+- name: Start VirtualMachine {{ vm_name }}
+  redhat.openshift.k8s:
+    api_version: kubevirt.io/v1
+    kind: VirtualMachine
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+    definition:
+      spec:
+        running: true
+  when: vm_operation == 'start'
+  delegate_to: localhost
+
+- name: Wait for VM to start
+  redhat.openshift_virtualization.kubevirt_vm_info:
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+  register: vm_status
+  until: vm_status.resources[0].status.printableStatus | default('Stopped') == 'Running'
+  retries: 30
+  delay: 10
+  when: vm_operation == 'start'
+  delegate_to: localhost
+
+# STOP operation
+- name: Stop VirtualMachine {{ vm_name }}
+  redhat.openshift.k8s:
+    api_version: kubevirt.io/v1
+    kind: VirtualMachine
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+    definition:
+      spec:
+        running: false
+  when: vm_operation == 'stop'
+  delegate_to: localhost
+
+- name: Wait for VM to stop
+  redhat.openshift_virtualization.kubevirt_vm_info:
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+  register: vm_status
+  until: vm_status.resources[0].status.printableStatus | default('Stopped') == 'Stopped'
+  retries: 30
+  delay: 10
+  when: vm_operation == 'stop'
+  delegate_to: localhost
+
+# RESTART operation
+- name: Stop VirtualMachine {{ vm_name }} for restart
+  redhat.openshift.k8s:
+    api_version: kubevirt.io/v1
+    kind: VirtualMachine
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+    definition:
+      spec:
+        running: false
+  when: vm_operation == 'restart'
+  delegate_to: localhost
+
+- name: Wait for VM to stop before restart
+  redhat.openshift_virtualization.kubevirt_vm_info:
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+  register: vm_status
+  until: vm_status.resources[0].status.printableStatus | default('Stopped') == 'Stopped'
+  retries: 30
+  delay: 10
+  when: vm_operation == 'restart'
+  delegate_to: localhost
+
+- name: Start VirtualMachine {{ vm_name }} after restart
+  redhat.openshift.k8s:
+    api_version: kubevirt.io/v1
+    kind: VirtualMachine
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+    definition:
+      spec:
+        running: true
+  when: vm_operation == 'restart'
+  delegate_to: localhost
+
+- name: Wait for VM to start after restart
+  redhat.openshift_virtualization.kubevirt_vm_info:
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+  register: vm_status
+  until: vm_status.resources[0].status.printableStatus | default('Stopped') == 'Running'
+  retries: 30
+  delay: 10
+  when: vm_operation == 'restart'
+  delegate_to: localhost
+
+# SNAPSHOT operation
+- name: Create VirtualMachine snapshot {{ vm_snapshot_name }}
+  redhat.openshift.k8s:
+    state: present
+    definition:
+      apiVersion: snapshot.kubevirt.io/v1alpha1
+      kind: VirtualMachineSnapshot
+      metadata:
+        name: "{{ vm_snapshot_name }}"
+        namespace: "{{ vm_namespace }}"
+      spec:
+        source:
+          apiGroup: kubevirt.io
+          kind: VirtualMachine
+          name: "{{ vm_name }}"
+  when: vm_operation == 'snapshot'
+  delegate_to: localhost
+
+- name: Wait for snapshot to be ready
+  redhat.openshift.k8s_info:
+    api_version: snapshot.kubevirt.io/v1alpha1
+    kind: VirtualMachineSnapshot
+    name: "{{ vm_snapshot_name }}"
+    namespace: "{{ vm_namespace }}"
+  register: snapshot_status
+  until:
+    - snapshot_status.resources | length > 0
+    - snapshot_status.resources[0].status.readyToUse | default(false) == true
+  retries: 60
+  delay: 10
+  when: vm_operation == 'snapshot'
+  delegate_to: localhost
+
+# Display completion message
+- name: Display operation completion message
+  ansible.builtin.debug:
+    msg: "{{ completion_messages[vm_operation] }}"
+  vars:
+    completion_messages:
+      start: "VirtualMachine {{ vm_name }} has been started successfully in namespace {{ vm_namespace }}"
+      stop: "VirtualMachine {{ vm_name }} has been stopped successfully in namespace {{ vm_namespace }}"
+      restart: "VirtualMachine {{ vm_name }} has been restarted successfully in namespace {{ vm_namespace }}"
+      snapshot: "Snapshot {{ vm_snapshot_name }} of VirtualMachine {{ vm_name }} has been created successfully in namespace {{ vm_namespace }}"
+  delegate_to: localhost
