@@ -1,0 +1,69 @@
+---
+- name: Get current VirtualMachine {{ vm_name }} information
+  redhat.openshift_virtualization.kubevirt_vm_info:
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+  register: vm_info
+
+- name: Fail if VM does not exist
+  ansible.builtin.fail:
+    msg: "VirtualMachine {{ vm_name }} does not exist in namespace {{ vm_namespace }}"
+  when: vm_info.resources | length == 0
+
+- name: Get current VM running state
+  ansible.builtin.set_fact:
+    vm_running: "{{ vm_info.resources[0].status.printableStatus | default('Stopped') == 'Running' }}"
+
+- name: Stop VirtualMachine {{ vm_name }} before resizing
+  redhat.openshift_virtualization.kubevirt_vm:
+    state: stopped
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+    wait: true
+  when: vm_running
+
+- name: Resize VirtualMachine {{ vm_name }} using instancetype
+  kubernetes.core.k8s:
+    state: patched
+    kind: VirtualMachine
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+    definition:
+      spec:
+        instancetype:
+          name: "{{ vm_instance_type }}"
+  when: vm_instance_type is defined and vm_instance_type != omit
+
+- name: Resize VirtualMachine {{ vm_name }} with explicit CPU and memory
+  kubernetes.core.k8s:
+    state: patched
+    kind: VirtualMachine
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+    definition:
+      spec:
+        template:
+          spec:
+            domain:
+              cpu:
+                cores: "{{ vm_cores | int }}"
+                sockets: "{{ vm_sockets | int }}"
+                threads: "{{ vm_threads | int }}"
+              memory:
+                guest: "{{ vm_memory_size }}Gi"
+  when:
+    - vm_cores is defined and vm_cores != omit
+    - vm_memory_size is defined and vm_memory_size != omit
+    - vm_instance_type is not defined or vm_instance_type == omit
+
+- name: Start VirtualMachine {{ vm_name }} after resizing
+  redhat.openshift_virtualization.kubevirt_vm:
+    state: running
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+    wait: true
+  when: vm_running
+
+- name: Display resize completion message
+  ansible.builtin.debug:
+    msg: "VirtualMachine {{ vm_name }} has been successfully resized in namespace {{ vm_namespace }}"

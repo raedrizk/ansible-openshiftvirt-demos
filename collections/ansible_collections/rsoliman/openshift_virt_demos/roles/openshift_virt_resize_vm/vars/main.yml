@@ -1,0 +1,8 @@
+---
+vm_namespace: "{{ vm_namespace_input | default('ansible-demo') }}"
+vm_name: "{{ vm_name_input | default('demovm') }}"
+vm_instance_type: "{{ vm_instance_type_input | default(omit) }}"
+vm_cores: "{{ vm_cores_input | default(omit) }}"
+vm_sockets: "{{ vm_sockets_input | default(1) | int }}"
+vm_threads: "{{ vm_threads_input | default(1) | int }}"
+vm_memory_size: "{{ vm_memory_size_input | default(omit) }}"
