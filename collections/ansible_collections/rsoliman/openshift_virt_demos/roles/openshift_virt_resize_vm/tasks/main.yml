@@ -15,14 +15,8 @@
     vm_running: "{{ vm_info.resources[0].spec.running | default(false) }}"
 
 - name: Stop VirtualMachine {{ vm_name }} before resizing
-  kubernetes.core.k8s:
-    state: patched
-    kind: VirtualMachine
-    name: "{{ vm_name }}"
-    namespace: "{{ vm_namespace }}"
-    definition:
-      spec:
-        running: false
+  ansible.builtin.shell: |
+    oc patch virtualmachine {{ vm_name }} -n {{ vm_namespace }} --type=merge -p '{"spec":{"running":false}}'
   when: vm_running
 
 - name: Wait for VM to stop
@@ -36,48 +30,38 @@
   when: vm_running
 
 - name: Resize VirtualMachine {{ vm_name }} using instancetype
-  kubernetes.core.k8s:
-    state: patched
-    kind: VirtualMachine
-    name: "{{ vm_name }}"
-    namespace: "{{ vm_namespace }}"
-    definition:
-      spec:
-        instancetype:
-          name: "{{ vm_instance_type }}"
+  ansible.builtin.shell: |
+    oc patch virtualmachine {{ vm_name }} -n {{ vm_namespace }} --type=merge -p '{"spec":{"instancetype":{"name":"{{ vm_instance_type }}"}}}'
   when: vm_instance_type is defined and vm_instance_type != omit
 
 - name: Resize VirtualMachine {{ vm_name }} with explicit CPU and memory
-  kubernetes.core.k8s:
-    state: patched
-    kind: VirtualMachine
-    name: "{{ vm_name }}"
-    namespace: "{{ vm_namespace }}"
-    definition:
-      spec:
-        template:
-          spec:
-            domain:
-              cpu:
-                cores: {{ vm_cores | int }}
-                sockets: {{ vm_sockets | int }}
-                threads: {{ vm_threads | int }}
-              memory:
-                guest: "{{ vm_memory_size }}Gi"
+  ansible.builtin.shell: |
+    oc patch virtualmachine {{ vm_name }} -n {{ vm_namespace }} --type=merge -p '{
+      "spec": {
+        "template": {
+          "spec": {
+            "domain": {
+              "cpu": {
+                "cores": {{ vm_cores | int }},
+                "sockets": {{ vm_sockets | int }},
+                "threads": {{ vm_threads | int }}
+              },
+              "memory": {
+                "guest": "{{ vm_memory_size }}Gi"
+              }
+            }
+          }
+        }
+      }
+    }'
   when:
     - vm_cores is defined and vm_cores != omit
     - vm_memory_size is defined and vm_memory_size != omit
     - vm_instance_type is not defined or vm_instance_type == omit
 
 - name: Start VirtualMachine {{ vm_name }} after resizing
-  kubernetes.core.k8s:
-    state: patched
-    kind: VirtualMachine
-    name: "{{ vm_name }}"
-    namespace: "{{ vm_namespace }}"
-    definition:
-      spec:
-        running: true
+  ansible.builtin.shell: |
+    oc patch virtualmachine {{ vm_name }} -n {{ vm_namespace }} --type=merge -p '{"spec":{"running":true}}'
   when: vm_running
 
 - name: Wait for VM to start
