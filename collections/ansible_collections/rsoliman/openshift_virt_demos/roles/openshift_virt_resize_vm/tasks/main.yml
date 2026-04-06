@@ -18,40 +18,90 @@
   delegate_to: localhost
 
 - name: Stop VirtualMachine {{ vm_name }} before resizing
-  redhat.openshift_virtualization.kubevirt_vm:
+  redhat.openshift.k8s:
+    api_version: kubevirt.io/v1
+    kind: VirtualMachine
     name: "{{ vm_name }}"
     namespace: "{{ vm_namespace }}"
-    state: present
-    running: false
-    wait: true
+    definition:
+      spec:
+        running: false
   when: vm_running
   delegate_to: localhost
 
-- name: Resize VirtualMachine {{ vm_name }} using instancetype
-  redhat.openshift_virtualization.kubevirt_vm:
+- name: Wait for VM to stop
+  redhat.openshift_virtualization.kubevirt_vm_info:
     name: "{{ vm_name }}"
     namespace: "{{ vm_namespace }}"
-    state: present
-    instancetype:
-      name: "{{ vm_instance_type }}"
+  register: vm_status
+  until: vm_status.resources[0].status.printableStatus | default('Stopped') == 'Stopped'
+  retries: 30
+  delay: 10
+  when: vm_running
+  delegate_to: localhost
+
+- name: Get full VirtualMachine {{ vm_name }} definition for instancetype update
+  redhat.openshift_virtualization.kubevirt_vm_info:
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+  register: current_vm_instancetype
   when: vm_instance_type is defined and vm_instance_type != omit
   delegate_to: localhost
 
-- name: Resize VirtualMachine {{ vm_name }} with explicit CPU and memory
-  redhat.openshift_virtualization.kubevirt_vm:
+- name: Update VM definition with new instancetype
+  ansible.builtin.set_fact:
+    updated_vm_instancetype: "{{ current_vm_instancetype.resources[0] | combine(update_instancetype, recursive=True) }}"
+  vars:
+    update_instancetype:
+      spec:
+        instancetype:
+          name: "{{ vm_instance_type }}"
+  when: vm_instance_type is defined and vm_instance_type != omit
+  delegate_to: localhost
+
+- name: Resize VirtualMachine {{ vm_name }} using instancetype
+  redhat.openshift.k8s:
+    state: present
+    definition: "{{ updated_vm_instancetype }}"
+  when: vm_instance_type is defined and vm_instance_type != omit
+  delegate_to: localhost
+
+- name: Get full VirtualMachine {{ vm_name }} definition
+  redhat.openshift_virtualization.kubevirt_vm_info:
     name: "{{ vm_name }}"
     namespace: "{{ vm_namespace }}"
+  register: current_vm
+  when:
+    - vm_cores is defined and vm_cores != omit
+    - vm_memory_size is defined and vm_memory_size != omit
+    - vm_instance_type is not defined or vm_instance_type == omit
+  delegate_to: localhost
+
+- name: Update VM definition with new CPU and memory
+  ansible.builtin.set_fact:
+    updated_vm: "{{ current_vm.resources[0] | combine(update_spec, recursive=True) }}"
+  vars:
+    update_spec:
+      spec:
+        template:
+          spec:
+            domain:
+              cpu:
+                cores: "{{ vm_cores | int }}"
+                sockets: "{{ vm_sockets | int }}"
+                threads: "{{ vm_threads | int }}"
+              memory:
+                guest: "{{ vm_memory_size }}Gi"
+  when:
+    - vm_cores is defined and vm_cores != omit
+    - vm_memory_size is defined and vm_memory_size != omit
+    - vm_instance_type is not defined or vm_instance_type == omit
+  delegate_to: localhost
+
+- name: Apply updated VirtualMachine {{ vm_name }} definition
+  redhat.openshift.k8s:
     state: present
-    spec:
-      template:
-        spec:
-          domain:
-            cpu:
-              cores: "{{ vm_cores | int }}"
-              sockets: "{{ vm_sockets | int }}"
-              threads: "{{ vm_threads | int }}"
-            memory:
-              guest: "{{ vm_memory_size }}Gi"
+    definition: "{{ updated_vm }}"
   when:
     - vm_cores is defined and vm_cores != omit
     - vm_memory_size is defined and vm_memory_size != omit
@@ -59,12 +109,25 @@
   delegate_to: localhost
 
 - name: Start VirtualMachine {{ vm_name }} after resizing
-  redhat.openshift_virtualization.kubevirt_vm:
+  redhat.openshift.k8s:
+    api_version: kubevirt.io/v1
+    kind: VirtualMachine
     name: "{{ vm_name }}"
     namespace: "{{ vm_namespace }}"
-    state: present
-    running: true
-    wait: true
+    definition:
+      spec:
+        running: true
+  when: vm_running
+  delegate_to: localhost
+
+- name: Wait for VM to start
+  redhat.openshift_virtualization.kubevirt_vm_info:
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+  register: vm_status
+  until: vm_status.resources[0].status.printableStatus | default('Stopped') == 'Running'
+  retries: 30
+  delay: 10
   when: vm_running
   delegate_to: localhost
 
