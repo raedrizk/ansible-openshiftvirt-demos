@@ -4,20 +4,31 @@
     name: "{{ vm_name }}"
     namespace: "{{ vm_namespace }}"
   register: vm_info
+  delegate_to: localhost
 
 - name: Fail if VM does not exist
   ansible.builtin.fail:
     msg: "VirtualMachine {{ vm_name }} does not exist in namespace {{ vm_namespace }}"
   when: vm_info.resources | length == 0
+  delegate_to: localhost
 
 - name: Get current VM running state
   ansible.builtin.set_fact:
     vm_running: "{{ vm_info.resources[0].spec.running | default(false) }}"
+  delegate_to: localhost
 
 - name: Stop VirtualMachine {{ vm_name }} before resizing
-  ansible.builtin.shell: |
-    oc patch virtualmachine {{ vm_name }} -n {{ vm_namespace }} --type=merge -p '{"spec":{"running":false}}'
+  kubernetes.core.k8s:
+    api_version: kubevirt.io/v1
+    kind: VirtualMachine
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+    state: present
+    definition:
+      spec:
+        running: false
   when: vm_running
+  delegate_to: localhost
 
 - name: Wait for VM to stop
   redhat.openshift_virtualization.kubevirt_vm_info:
@@ -28,41 +39,78 @@
   retries: 30
   delay: 10
   when: vm_running
+  delegate_to: localhost
 
 - name: Resize VirtualMachine {{ vm_name }} using instancetype
-  ansible.builtin.shell: |
-    oc patch virtualmachine {{ vm_name }} -n {{ vm_namespace }} --type=merge -p '{"spec":{"instancetype":{"name":"{{ vm_instance_type }}"}}}'
+  kubernetes.core.k8s:
+    api_version: kubevirt.io/v1
+    kind: VirtualMachine
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+    state: present
+    definition:
+      spec:
+        instancetype:
+          name: "{{ vm_instance_type }}"
   when: vm_instance_type is defined and vm_instance_type != omit
+  delegate_to: localhost
 
-- name: Resize VirtualMachine {{ vm_name }} with explicit CPU and memory
-  ansible.builtin.shell: |
-    oc patch virtualmachine {{ vm_name }} -n {{ vm_namespace }} --type=merge -p '{
-      "spec": {
-        "template": {
-          "spec": {
-            "domain": {
-              "cpu": {
-                "cores": {{ vm_cores | int }},
-                "sockets": {{ vm_sockets | int }},
-                "threads": {{ vm_threads | int }}
-              },
-              "memory": {
-                "guest": "{{ vm_memory_size }}Gi"
+- name: Build resize definition JSON with proper integer types
+  ansible.builtin.set_fact:
+    vm_resize_json: |
+      {
+        "apiVersion": "kubevirt.io/v1",
+        "kind": "VirtualMachine",
+        "metadata": {
+          "name": "{{ vm_name }}",
+          "namespace": "{{ vm_namespace }}"
+        },
+        "spec": {
+          "template": {
+            "spec": {
+              "domain": {
+                "cpu": {
+                  "cores": {{ vm_cores | int }},
+                  "sockets": {{ vm_sockets | int }},
+                  "threads": {{ vm_threads | int }}
+                },
+                "memory": {
+                  "guest": "{{ vm_memory_size }}Gi"
+                }
               }
             }
           }
         }
       }
-    }'
   when:
     - vm_cores is defined and vm_cores != omit
     - vm_memory_size is defined and vm_memory_size != omit
     - vm_instance_type is not defined or vm_instance_type == omit
+  delegate_to: localhost
+
+- name: Resize VirtualMachine {{ vm_name }} with explicit CPU and memory
+  kubernetes.core.k8s:
+    state: present
+    resource_definition: "{{ vm_resize_json | from_json }}"
+    merge_type: merge
+  when:
+    - vm_cores is defined and vm_cores != omit
+    - vm_memory_size is defined and vm_memory_size != omit
+    - vm_instance_type is not defined or vm_instance_type == omit
+  delegate_to: localhost
 
 - name: Start VirtualMachine {{ vm_name }} after resizing
-  ansible.builtin.shell: |
-    oc patch virtualmachine {{ vm_name }} -n {{ vm_namespace }} --type=merge -p '{"spec":{"running":true}}'
+  kubernetes.core.k8s:
+    api_version: kubevirt.io/v1
+    kind: VirtualMachine
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+    state: present
+    definition:
+      spec:
+        running: true
   when: vm_running
+  delegate_to: localhost
 
 - name: Wait for VM to start
   redhat.openshift_virtualization.kubevirt_vm_info:
@@ -73,7 +121,9 @@
   retries: 30
   delay: 10
   when: vm_running
+  delegate_to: localhost
 
 - name: Display resize completion message
   ansible.builtin.debug:
     msg: "VirtualMachine {{ vm_name }} has been successfully resized in namespace {{ vm_namespace }}"
+  delegate_to: localhost
