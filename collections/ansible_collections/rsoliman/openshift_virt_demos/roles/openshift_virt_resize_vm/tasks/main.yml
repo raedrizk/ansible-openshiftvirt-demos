@@ -59,9 +59,9 @@
           spec:
             domain:
               cpu:
-                cores: "{{ vm_cores | int }}"
-                sockets: "{{ vm_sockets | int }}"
-                threads: "{{ vm_threads | int }}"
+                cores: {{ vm_cores | int }}
+                sockets: {{ vm_sockets | int }}
+                threads: {{ vm_threads | int }}
               memory:
                 guest: "{{ vm_memory_size }}Gi"
   when:
