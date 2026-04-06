@@ -18,62 +18,40 @@
   delegate_to: localhost
 
 - name: Stop VirtualMachine {{ vm_name }} before resizing
-  kubernetes.core.k8s:
-    api_version: kubevirt.io/v1
-    kind: VirtualMachine
+  redhat.openshift_virtualization.kubevirt_vm:
     name: "{{ vm_name }}"
     namespace: "{{ vm_namespace }}"
     state: present
-    definition:
-      spec:
-        running: false
-  when: vm_running
-  delegate_to: localhost
-
-- name: Wait for VM to stop
-  redhat.openshift_virtualization.kubevirt_vm_info:
-    name: "{{ vm_name }}"
-    namespace: "{{ vm_namespace }}"
-  register: vm_status
-  until: vm_status.resources[0].status.printableStatus | default('Stopped') == 'Stopped'
-  retries: 30
-  delay: 10
+    running: false
+    wait: true
   when: vm_running
   delegate_to: localhost
 
 - name: Resize VirtualMachine {{ vm_name }} using instancetype
-  kubernetes.core.k8s:
-    api_version: kubevirt.io/v1
-    kind: VirtualMachine
+  redhat.openshift_virtualization.kubevirt_vm:
     name: "{{ vm_name }}"
     namespace: "{{ vm_namespace }}"
     state: present
-    definition:
-      spec:
-        instancetype:
-          name: "{{ vm_instance_type }}"
+    instancetype:
+      name: "{{ vm_instance_type }}"
   when: vm_instance_type is defined and vm_instance_type != omit
   delegate_to: localhost
 
 - name: Resize VirtualMachine {{ vm_name }} with explicit CPU and memory
-  ansible.builtin.shell: |
-    cat <<'EOF' | oc apply -f -
-    apiVersion: kubevirt.io/v1
-    kind: VirtualMachine
-    metadata:
-      name: {{ vm_name }}
-      namespace: {{ vm_namespace }}
+  redhat.openshift_virtualization.kubevirt_vm:
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+    state: present
     spec:
       template:
         spec:
           domain:
             cpu:
-              cores: {{ vm_cores | int }}
-              sockets: {{ vm_sockets | int }}
-              threads: {{ vm_threads | int }}
+              cores: "{{ vm_cores | int }}"
+              sockets: "{{ vm_sockets | int }}"
+              threads: "{{ vm_threads | int }}"
             memory:
-              guest: {{ vm_memory_size }}Gi
-    EOF
+              guest: "{{ vm_memory_size }}Gi"
   when:
     - vm_cores is defined and vm_cores != omit
     - vm_memory_size is defined and vm_memory_size != omit
@@ -81,26 +59,12 @@
   delegate_to: localhost
 
 - name: Start VirtualMachine {{ vm_name }} after resizing
-  kubernetes.core.k8s:
-    api_version: kubevirt.io/v1
-    kind: VirtualMachine
+  redhat.openshift_virtualization.kubevirt_vm:
     name: "{{ vm_name }}"
     namespace: "{{ vm_namespace }}"
     state: present
-    definition:
-      spec:
-        running: true
-  when: vm_running
-  delegate_to: localhost
-
-- name: Wait for VM to start
-  redhat.openshift_virtualization.kubevirt_vm_info:
-    name: "{{ vm_name }}"
-    namespace: "{{ vm_namespace }}"
-  register: vm_status
-  until: vm_status.resources[0].status.printableStatus | default('Stopped') == 'Running'
-  retries: 30
-  delay: 10
+    running: true
+    wait: true
   when: vm_running
   delegate_to: localhost
 
