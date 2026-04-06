@@ -55,9 +55,9 @@
   when: vm_instance_type is defined and vm_instance_type != omit
   delegate_to: localhost
 
-- name: Build resize definition JSON with proper integer types
+- name: Build resize patch JSON with unquoted integers
   ansible.builtin.set_fact:
-    vm_resize_json: |
+    resize_patch_json: >-
       {
         "apiVersion": "kubevirt.io/v1",
         "kind": "VirtualMachine",
@@ -88,11 +88,19 @@
     - vm_instance_type is not defined or vm_instance_type == omit
   delegate_to: localhost
 
+- name: Parse JSON to dict with proper types
+  ansible.builtin.set_fact:
+    resize_patch_parsed: "{{ resize_patch_json | from_json }}"
+  when:
+    - vm_cores is defined and vm_cores != omit
+    - vm_memory_size is defined and vm_memory_size != omit
+    - vm_instance_type is not defined or vm_instance_type == omit
+  delegate_to: localhost
+
 - name: Resize VirtualMachine {{ vm_name }} with explicit CPU and memory
   kubernetes.core.k8s:
     state: present
-    resource_definition: "{{ vm_resize_json | from_json }}"
-    merge_type: merge
+    resource_definition: "{{ resize_patch_parsed }}"
   when:
     - vm_cores is defined and vm_cores != omit
     - vm_memory_size is defined and vm_memory_size != omit
