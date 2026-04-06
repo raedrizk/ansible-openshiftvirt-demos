@@ -12,14 +12,27 @@
 
 - name: Get current VM running state
   ansible.builtin.set_fact:
-    vm_running: "{{ vm_info.resources[0].status.printableStatus | default('Stopped') == 'Running' }}"
+    vm_running: "{{ vm_info.resources[0].spec.running | default(false) }}"
 
 - name: Stop VirtualMachine {{ vm_name }} before resizing
-  redhat.openshift_virtualization.kubevirt_vm:
-    state: stopped
+  kubernetes.core.k8s:
+    state: patched
+    kind: VirtualMachine
     name: "{{ vm_name }}"
     namespace: "{{ vm_namespace }}"
-    wait: true
+    definition:
+      spec:
+        running: false
+  when: vm_running
+
+- name: Wait for VM to stop
+  redhat.openshift_virtualization.kubevirt_vm_info:
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+  register: vm_status
+  until: vm_status.resources[0].status.printableStatus | default('Stopped') == 'Stopped'
+  retries: 30
+  delay: 10
   when: vm_running
 
 - name: Resize VirtualMachine {{ vm_name }} using instancetype
@@ -57,11 +70,24 @@
     - vm_instance_type is not defined or vm_instance_type == omit
 
 - name: Start VirtualMachine {{ vm_name }} after resizing
-  redhat.openshift_virtualization.kubevirt_vm:
-    state: running
+  kubernetes.core.k8s:
+    state: patched
+    kind: VirtualMachine
     name: "{{ vm_name }}"
     namespace: "{{ vm_namespace }}"
-    wait: true
+    definition:
+      spec:
+        running: true
+  when: vm_running
+
+- name: Wait for VM to start
+  redhat.openshift_virtualization.kubevirt_vm_info:
+    name: "{{ vm_name }}"
+    namespace: "{{ vm_namespace }}"
+  register: vm_status
+  until: vm_status.resources[0].status.printableStatus | default('Stopped') == 'Running'
+  retries: 30
+  delay: 10
   when: vm_running
 
 - name: Display resize completion message
