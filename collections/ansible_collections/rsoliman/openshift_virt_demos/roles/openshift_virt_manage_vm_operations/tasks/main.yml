@@ -137,7 +137,7 @@
   delegate_to: localhost
 
 - name: Wait for snapshot to be ready
-  redhat.openshift.k8s_info:
+  kubernetes.core.k8s_info:
     api_version: snapshot.kubevirt.io/v1alpha1
     kind: VirtualMachineSnapshot
     name: "{{ vm_snapshot_name }}"
