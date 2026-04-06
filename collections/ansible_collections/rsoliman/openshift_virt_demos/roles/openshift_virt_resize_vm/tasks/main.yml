@@ -77,18 +77,9 @@
     - vm_instance_type is not defined or vm_instance_type == omit
   delegate_to: localhost
 
-- name: Build CPU spec as JSON with proper integer types
+- name: Build CPU spec with proper integer types using Jinja2 dict
   ansible.builtin.set_fact:
-    cpu_spec_json: '{"cores": {{ vm_cores | int }}, "sockets": {{ vm_sockets | int }}, "threads": {{ vm_threads | int }}}'
-  when:
-    - vm_cores is defined and vm_cores != omit
-    - vm_memory_size is defined and vm_memory_size != omit
-    - vm_instance_type is not defined or vm_instance_type == omit
-  delegate_to: localhost
-
-- name: Parse CPU spec to get proper integer types
-  ansible.builtin.set_fact:
-    cpu_spec_parsed: "{{ cpu_spec_json | from_json }}"
+    cpu_spec_with_ints: "{{ {'cores': vm_cores | int, 'sockets': vm_sockets | int, 'threads': vm_threads | int} }}"
   when:
     - vm_cores is defined and vm_cores != omit
     - vm_memory_size is defined and vm_memory_size != omit
@@ -104,7 +95,7 @@
         template:
           spec:
             domain:
-              cpu: "{{ cpu_spec_parsed }}"
+              cpu: "{{ cpu_spec_with_ints }}"
               memory:
                 guest: "{{ vm_memory_size }}Gi"
   when:
